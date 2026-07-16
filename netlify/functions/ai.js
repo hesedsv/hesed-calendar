@@ -16,7 +16,7 @@ exports.handler = async (event) => {
     if (action === "ideas") {
       const prompt = `${BRAND} ${TONO}
 
-Genera 6 ideas para Instagram de Hesed ${payload.country}. Una de cada tipo: post de producto, reel de proceso, carrusel de aesthetic, historia interactiva, post de reseña, meme alternativo. Cortas y específicas.
+Genera 3 ideas para Instagram de Hesed ${payload.country}. Tipos diferentes entre sí. Cortas y específicas. Solo 3, no más.
 
 JSON sin backticks:
 [{"title":"Título","type":"post|historia|reel|carrusel","caption":"Caption corto con emojis y CTA","angle":"Objetivo"}]`;
@@ -24,7 +24,7 @@ JSON sin backticks:
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {"Content-Type":"application/json","x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
-        body: JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,messages:[{role:"user",content:prompt}]}),
+        body: JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:400,messages:[{role:"user",content:prompt}]}),
       });
       const data = await response.json();
       const result = data.content?.map(b=>b.text||"").join("")||"";
