@@ -750,7 +750,7 @@ window.generateIdeas=async()=>{
     });
     document.getElementById("ideas-result").innerHTML="";document.getElementById("ideas-result").appendChild(grid);
   }catch(e){document.getElementById("ideas-result").innerHTML=`<div class="empty-ai"><div style="font-size:28px;">😕</div><div>Error. Intenta de nuevo.</div></div>`;}
-  btn.disabled=false;btn.textContent="✨ Generar 6 ideas";
+  btn.disabled=false;btn.textContent="✨ Generar 4 ideas";
 };
 window.useIdea=(jsonStr)=>{
   const idea=JSON.parse(jsonStr);
