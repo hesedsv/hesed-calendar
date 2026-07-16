@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hesed · Calendario</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:#0D0F1A;color:#E8EAFF;min-height:100vh;}
+button{font-family:'Sora',sans-serif;cursor:pointer;}
+input,textarea,select{font-family:'Sora',sans-serif;outline:none;resize:none;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#1a1a2e;}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px;}
+#loading-screen{position:fixed;inset:0;background:#0D0F1A;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.spinner{width:36px;height:36px;border:3px solid rgba(192,57,43,0.2);border-top-color:#C0392B;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#header{background:linear-gradient(135deg,#1A0A0A,#0D0F1A);border-bottom:1px solid rgba(192,57,43,0.3);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10;}
+#logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#C0392B,#8E44AD);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;}
+#header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+#sync-msg{font-size:11px;font-weight:600;min-width:80px;}
+.nav-btn{height:32px;min-width:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#E8EAFF;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 10px;gap:5px;}
+#week-label{text-align:center;min-width:145px;}
+#week-dates{font-size:12px;font-weight:600;}
+#week-rel{font-size:10px;color:#C0392B;margin-top:1px;}
+#page-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.06);}
+.page-tab{padding:12px 24px;font-size:13px;font-weight:600;color:#888;border:none;background:transparent;border-bottom:2px solid transparent;cursor:pointer;}
+.page-tab.active{color:#E8EAFF;border-bottom-color:#C0392B;}
+#tabs{padding:12px 24px 0;display:flex;gap:8px;border-bottom:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;align-items:flex-end;}
+.tab-btn{padding:9px 16px;border-radius:10px 10px 0 0;border:none;font-size:13px;font-weight:600;transition:all 0.2s;border-bottom:3px solid transparent;}
+.tab-count{margin-left:6px;border-radius:20px;padding:1px 7px;font-size:11px;}
+#legend{margin-left:auto;display:flex;gap:10px;align-items:center;padding-bottom:8px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#888;}
+#grid-wrap{padding:16px 24px;overflow-x:auto;}
+#grid{display:grid;grid-template-columns:repeat(7,minmax(148px,1fr));gap:9px;min-width:1040px;}
+.day-col{background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;}
+.day-col.today{border-color:rgba(192,57,43,0.5);}
+.day-header{padding:9px 11px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;}
+.day-col.today .day-header{background:rgba(192,57,43,0.12);}
+.day-name{font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;}
+.day-col.today .day-name{color:#C0392B;}
+.day-date{font-size:9px;color:#666;margin-top:1px;}
+.day-count{font-size:10px;color:#666;background:rgba(255,255,255,0.08);border-radius:20px;padding:1px 7px;}
+.day-cards{padding:7px;display:flex;flex-direction:column;gap:6px;min-height:100px;}
+.card{border-radius:9px;padding:6px 9px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.card:hover{transform:translateY(-1px);}
+.card-ref-img{width:100%;height:60px;object-fit:cover;border-radius:6px;margin-top:5px;display:block;}
+.card-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.card-title{font-size:11px;font-weight:600;color:#E8EAFF;margin-top:2px;line-height:1.3;}
+.card-caption{font-size:9px;color:#666;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-header-row{display:flex;justify-content:space-between;align-items:flex-start;}
+.status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+.card-metrics-bar{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;}
+.metric-chip{font-size:9px;color:#666;display:flex;align-items:center;gap:2px;}
+.has-ad-badge{position:absolute;top:5px;right:5px;width:14px;height:14px;background:#FF9F43;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;}
+.add-btn{border:1px dashed rgba(255,255,255,0.12);background:transparent;border-radius:9px;padding:6px;color:#555;font-size:16px;transition:all 0.15s;width:100%;}
+.add-btn:hover{color:#C0392B;border-color:rgba(192,57,43,0.5);}
+#overview{padding:0 24px 20px;}
+#overview-bar{background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06);padding:12px 18px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+.ov-label{font-size:11px;color:#666;font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.ov-country{display:flex;align-items:center;gap:7px;}
+.ov-dot{width:9px;height:9px;border-radius:50%;}
+.ov-name{font-size:11px;color:#888;}
+.ov-count{font-size:12px;font-weight:700;}
+.ov-statuses{margin-left:auto;display:flex;gap:12px;flex-wrap:wrap;}
+.ov-status{display:flex;align-items:center;gap:4px;font-size:10px;color:#666;}
+.ov-sdot{width:7px;height:7px;border-radius:50%;}
+#dashboard{padding:20px 24px;display:none;}
+.dash-section{margin-bottom:28px;}
+.dash-section-title{font-size:13px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px;}
+.kpi-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;}
+.kpi-label{font-size:11px;color:#666;margin-bottom:6px;}
+.kpi-value{font-size:24px;font-weight:700;line-height:1;}
+.kpi-sub{font-size:11px;color:#666;margin-top:4px;}
+.posts-table{width:100%;border-collapse:collapse;}
+.posts-table th{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;padding:8px 12px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.06);}
+.posts-table td{font-size:12px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+.posts-table tr:hover td{background:rgba(255,255,255,0.02);cursor:pointer;}
+.bar-wrap{width:80px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;}
+.ad-badge{font-size:10px;background:rgba(255,159,67,0.2);color:#FF9F43;border-radius:20px;padding:2px 8px;font-weight:600;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#161828;border-radius:16px;width:100%;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,0.7);max-height:92vh;overflow-y:auto;}
+#card-modal .modal-box{border:1px solid rgba(192,57,43,0.3);max-width:540px;}
+#metrics-modal .modal-box{border:1px solid rgba(38,222,129,0.3);max-width:540px;}
+#ai-modal .modal-box{border:1px solid rgba(142,68,173,0.4);max-width:840px;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.modal-close{background:none;border:none;color:#666;font-size:20px;cursor:pointer;}
+.field{margin-bottom:12px;}
+.field-label{display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px;}
+.field input,.field textarea,.field select{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 13px;color:#E8EAFF;font-size:13px;}
+.field select option{background:#161828;}
+.field textarea{line-height:1.5;}
+.pills{display:flex;gap:7px;flex-wrap:wrap;}
+.pill{padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#888;cursor:pointer;}
+.hash-meta{font-size:10px;color:#555;margin-top:4px;display:flex;gap:10px;align-items:center;}
+.hash-copy{background:none;border:none;color:#C0392B;font-size:10px;font-family:'Sora',sans-serif;cursor:pointer;}
+.modal-actions{display:flex;gap:9px;margin-top:20px;}
+#btn-delete{padding:9px 15px;border-radius:9px;border:1px solid rgba(255,100,100,0.3);background:rgba(255,100,100,0.08);color:#FF6B6B;font-size:12px;font-weight:600;}
+#btn-save{flex:1;padding:9px;border-radius:9px;border:none;color:#fff;font-size:13px;font-weight:700;}
+#btn-metrics-open{padding:9px 15px;border-radius:9px;border:1px solid rgba(38,222,129,0.3);background:rgba(38,222,129,0.08);color:#26de81;font-size:12px;font-weight:600;}
+
+/* REFS SECTION */
+.refs-section{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:12px;}
+.refs-title{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+.photo-upload-area{border:1px dashed rgba(255,255,255,0.15);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:10px;}
+.photo-upload-area:hover{border-color:rgba(192,57,43,0.5);background:rgba(192,57,43,0.05);}
+.photo-upload-area input{display:none;}
+.photos-preview{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.photo-thumb{position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-remove{position:absolute;top:3px;right:3px;width:18px;height:18px;background:rgba(0,0,0,0.7);border:none;border-radius:50%;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.video-link-wrap{display:flex;gap:8px;align-items:center;}
+.video-link-wrap input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 13px;color:#E8EAFF;font-size:12px;}
+.video-preview{margin-top:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:9px;padding:10px;display:flex;align-items:center;gap:10px;}
+.video-preview a{color:#8E44AD;font-size:12px;text-decoration:none;font-weight:600;}
+.video-preview a:hover{text-decoration:underline;}
+
+/* METRICS MODAL */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.metric-field label{display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;}
+.metric-field input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 13px;color:#E8EAFF;font-size:14px;font-weight:600;}
+.ad-section{background:rgba(255,159,67,0.06);border:1px solid rgba(255,159,67,0.2);border-radius:12px;padding:14px;margin-top:12px;}
+.ad-section-title{font-size:11px;font-weight:700;color:#FF9F43;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+.ad-toggle{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.toggle{width:40px;height:22px;background:rgba(255,255,255,0.1);border-radius:11px;position:relative;cursor:pointer;transition:background 0.2s;border:none;}
+.toggle.on{background:#FF9F43;}
+.toggle::after{content:'';width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform 0.2s;}
+.toggle.on::after{transform:translateX(18px);}
+
+/* AI */
+#ai-tabs{display:flex;gap:8px;margin-bottom:18px;}
+.ai-tab{padding:7px 18px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#888;font-size:12px;font-weight:600;cursor:pointer;}
+.ai-tab.active{background:rgba(142,68,173,0.2);border-color:#8E44AD;color:#8E44AD;}
+.ai-section{display:none;}
+.ai-section.active{display:block;}
+.ai-country-row{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.ai-result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:14px;}
+.idea-card{background:rgba(255,255,255,0.03);border-radius:11px;padding:14px;}
+.idea-card-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;}
+.idea-card-title{font-size:13px;font-weight:700;color:#E8EAFF;margin-bottom:7px;line-height:1.3;}
+.idea-card-caption{font-size:11px;color:#aaa;line-height:1.6;margin-bottom:9px;}
+.idea-card-angle{font-size:10px;color:#666;background:rgba(255,255,255,0.04);border-radius:7px;padding:5px 9px;}
+.idea-use-btn{margin-top:9px;width:100%;padding:7px;border-radius:8px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;}
+.copy-result{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:14px;margin-top:14px;font-size:13px;color:#E8EAFF;line-height:1.7;white-space:pre-wrap;}
+.ai-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 13px;color:#E8EAFF;font-size:13px;font-family:'Sora',sans-serif;margin-bottom:9px;}
+.ai-btn{padding:9px 22px;border-radius:9px;border:none;background:linear-gradient(135deg,#8E44AD,#C0392B);color:#fff;font-size:13px;font-weight:700;font-family:'Sora',sans-serif;cursor:pointer;}
+.ai-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.empty-ai{text-align:center;padding:36px 0;color:#444;font-size:13px;}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:#888;">Conectando con Hesed Calendar…</div>
+</div>
+
+<div id="app" style="display:none;">
+
+<div id="header">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="logo">H</div>
+    <div>
+      <div style="font-size:17px;font-weight:700;letter-spacing:-0.5px;">Hesed</div>
+      <div style="font-size:10px;color:#888;">Calendario · Métricas · Moda Alternativa</div>
+    </div>
+  </div>
+  <div id="header-right">
+    <span id="sync-msg"></span>
+    <button class="nav-btn" onclick="openAI()" style="color:#8E44AD;border-color:rgba(142,68,173,0.4);background:rgba(142,68,173,0.1);">🧠 Ideas & Copy</button>
+    <button class="nav-btn" onclick="exportPNG()" style="color:#C0392B;border-color:rgba(192,57,43,0.4);background:rgba(192,57,43,0.1);">📤 PNG</button>
+    <button class="nav-btn" onclick="changeWeek(-1)">‹</button>
+    <div id="week-label"><div id="week-dates"></div><div id="week-rel"></div></div>
+    <button class="nav-btn" onclick="changeWeek(1)">›</button>
+    <button class="nav-btn" id="btn-today" onclick="goToday()" style="display:none;color:#C0392B;background:rgba(192,57,43,0.1);">Hoy</button>
+  </div>
+</div>
+
+<div id="page-tabs">
+  <button class="page-tab active" onclick="setPage('calendar')">📅 Calendario</button>
+  <button class="page-tab" onclick="setPage('dashboard')">📊 Métricas</button>
+</div>
+
+<div id="tabs">
+  <button class="tab-btn" data-country="sv" onclick="setCountry('sv')">🇸🇻 El Salvador <span class="tab-count" id="count-sv">0</span></button>
+  <button class="tab-btn" data-country="cr" onclick="setCountry('cr')">🇨🇷 Costa Rica <span class="tab-count" id="count-cr">0</span></button>
+  <button class="tab-btn" data-country="gt" onclick="setCountry('gt')">🇬🇹 Guatemala <span class="tab-count" id="count-gt">0</span></button>
+  <div id="legend">
+    <div class="legend-item"><span style="color:#6C63FF">▦</span>Post</div>
+    <div class="legend-item"><span style="color:#FF6584">◈</span>Historia</div>
+    <div class="legend-item"><span style="color:#FF9F43">▶</span>Reel</div>
+    <div class="legend-item"><span style="color:#26de81">⊞</span>Carrusel</div>
+    <div class="legend-item"><span style="color:#FF9F43">💰</span>Con pauta</div>
+  </div>
+</div>
+
+<div id="calendar-page">
+  <div id="grid-wrap"><div id="grid"></div></div>
+  <div id="overview">
+    <div id="overview-bar">
+      <div class="ov-label">Semana</div>
+      <div class="ov-country"><div class="ov-dot" style="background:#C0392B"></div><span class="ov-name">🇸🇻 SV</span><span class="ov-count" id="ov-sv">0 piezas</span></div>
+      <div class="ov-country"><div class="ov-dot" style="background:#8E44AD"></div><span class="ov-name">🇨🇷 CR</span><span class="ov-count" id="ov-cr">0 piezas</span></div>
+      <div class="ov-country"><div class="ov-dot" style="background:#D35400"></div><span class="ov-name">🇬🇹 GT</span><span class="ov-count" id="ov-gt">0 piezas</span></div>
+      <div class="ov-statuses">
+        <div class="ov-status"><div class="ov-sdot" style="background:#aaa"></div>Idea</div>
+        <div class="ov-status"><div class="ov-sdot" style="background:#FF9F43"></div>En proceso</div>
+        <div class="ov-status"><div class="ov-sdot" style="background:#26de81"></div>Listo</div>
+        <div class="ov-status"><div class="ov-sdot" style="background:#6C63FF"></div>Publicado</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="dash-section">
+    <div class="dash-section-title">📊 KPIs de la semana — <span id="dash-country-name"></span></div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">🏆 Posts por rendimiento</div>
+    <div style="overflow-x:auto;">
+      <table class="posts-table">
+        <thead><tr><th>Post</th><th>Tipo</th><th>Alcance</th><th>Likes</th><th>Coment.</th><th>Compart.</th><th>Guardados</th><th>Visual.</th><th>Followers+</th><th>Pauta</th><th>Score</th></tr></thead>
+        <tbody id="posts-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">💰 Resumen de publicidad</div>
+    <div class="kpi-grid" id="ad-kpi-grid"></div>
+  </div>
+</div>
+</div>
+
+<!-- CARD MODAL -->
+<div id="card-modal" class="modal-overlay" onclick="overlayClick(event,'card-modal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div id="modal-title" style="font-size:14px;font-weight:700;"></div>
+      <button class="modal-close" onclick="closeCardModal()">✕</button>
+    </div>
+    <div class="field">
+      <label class="field-label">Tipo</label>
+      <div class="pills" id="type-row"></div>
+    </div>
+    <div class="field">
+      <label class="field-label">Título / tema</label>
+      <input type="text" id="f-title" placeholder="Ej: New drop botas Nocturna…"/>
+    </div>
+    <div class="field">
+      <label class="field-label">Caption</label>
+      <textarea id="f-caption" rows="3" placeholder="Copy del post…"></textarea>
+    </div>
+    <div class="field">
+      <label class="field-label">Hashtags</label>
+      <textarea id="f-hashtags" rows="2" style="color:#C0392B;font-size:12px;" placeholder="#alternativefashion #hesed…"></textarea>
+      <div class="hash-meta" id="hash-meta" style="display:none;">
+        <span id="hash-count"></span>
+        <button class="hash-copy" onclick="copyHashtags()">📋 Copiar</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Notas internas</label>
+      <input type="text" id="f-nota" placeholder="Referencias, instrucciones para el equipo…"/>
+    </div>
+
+    <!-- REFERENCIAS VISUALES -->
+    <div class="refs-section">
+      <div class="refs-title">📸 Referencias visuales</div>
+      <div class="photos-preview" id="photos-preview"></div>
+      <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()">
+        <input type="file" id="photo-input" accept="image/*" multiple onchange="handlePhotos(event)"/>
+        <div style="font-size:22px;margin-bottom:4px;">🖼</div>
+        <div style="font-size:12px;color:#666;">Subir fotos de referencia (máx 3)</div>
+        <div style="font-size:10px;color:#444;margin-top:3px;">JPG, PNG, WEBP</div>
+      </div>
+      <div style="margin-top:10px;">
+        <div class="refs-title" style="margin-bottom:6px;">🎥 Link de video referencia</div>
+        <div class="video-link-wrap">
+          <input type="url" id="f-video-link" placeholder="https://youtube.com/... o TikTok, Instagram…" oninput="updateVideoPreview()"/>
+        </div>
+        <div class="video-preview" id="video-preview" style="display:none;">
+          <span style="font-size:20px;">🎬</span>
+          <div>
+            <div style="font-size:10px;color:#666;margin-bottom:2px;">Video de referencia</div>
+            <a id="video-preview-link" href="#" target="_blank">Abrir video →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Estado</label>
+      <div class="pills" id="status-row"></div>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-delete" onclick="deleteCard()">Eliminar</button>
+      <button id="btn-metrics-open" onclick="openMetricsFromCard()">📊 Métricas</button>
+      <button id="btn-save" onclick="saveCard()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- METRICS MODAL -->
+<div id="metrics-modal" class="modal-overlay" onclick="overlayClick(event,'metrics-modal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:14px;font-weight:700;">📊 Métricas del post</div>
+        <div id="metrics-post-title" style="font-size:11px;color:#888;margin-top:3px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeMetricsModal()">✕</button>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-field"><label>👁 Alcance</label><input type="number" id="m-reach" placeholder="0" min="0"/></div>
+      <div class="metric-field"><label>❤️ Likes</label><input type="number" id="m-likes" placeholder="0" min="0"/></div>
+      <div class="metric-field"><label>💬 Comentarios</label><input type="number" id="m-comments" placeholder="0" min="0"/></div>
+      <div class="metric-field"><label>🔁 Compartidos</label><input type="number" id="m-shares" placeholder="0" min="0"/></div>
+      <div class="metric-field"><label>🔖 Guardados</label><input type="number" id="m-saves" placeholder="0" min="0"/></div>
+      <div class="metric-field"><label>▶ Visualizaciones</label><input type="number" id="m-views" placeholder="0" min="0"/></div>
+      <div class="metric-field"><label>👤 Followers ganados</label><input type="number" id="m-followers" placeholder="0" min="0"/></div>
+    </div>
+    <div class="ad-section">
+      <div class="ad-section-title">💰 Publicidad / Pauta</div>
+      <div class="ad-toggle">
+        <button class="toggle" id="ad-toggle" onclick="toggleAd()"></button>
+        <span id="ad-toggle-label" style="font-size:12px;color:#888;">Sin pauta</span>
+      </div>
+      <div id="ad-fields" style="display:none;">
+        <div class="metrics-grid">
+          <div class="metric-field"><label>💵 Presupuesto ($)</label><input type="number" id="m-ad-budget" placeholder="0.00" step="0.01" min="0"/></div>
+          <div class="metric-field"><label>👁 Alcance pagado</label><input type="number" id="m-ad-reach" placeholder="0" min="0"/></div>
+          <div class="metric-field"><label>🖱 Clicks</label><input type="number" id="m-ad-clicks" placeholder="0" min="0"/></div>
+          <div class="metric-field"><label>📅 Días activo</label><input type="number" id="m-ad-days" placeholder="1" min="1"/></div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label class="field-label">Objetivo de la pauta</label>
+          <select id="m-ad-objective">
+            <option value="">Seleccionar…</option>
+            <option value="alcance">Alcance</option>
+            <option value="interaccion">Interacción</option>
+            <option value="trafico">Tráfico a web</option>
+            <option value="ventas">Ventas</option>
+            <option value="followers">Conseguir seguidores</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeMetricsModal()" style="padding:9px 15px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#888;font-size:12px;cursor:pointer;">Cancelar</button>
+      <button onclick="saveMetrics()" style="flex:1;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,#26de81,#20c170);color:#0D0F1A;font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;">Guardar métricas</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI MODAL -->
+<div id="ai-modal" class="modal-overlay" onclick="overlayClick(event,'ai-modal')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div style="font-size:15px;font-weight:700;">🧠 Ideas & Copy con IA</div>
+      <button class="modal-close" onclick="document.getElementById('ai-modal').classList.remove('open')">✕</button>
+    </div>
+    <div id="ai-tabs">
+      <button class="ai-tab active" onclick="switchAITab('ideas')">💡 Ideas</button>
+      <button class="ai-tab" onclick="switchAITab('copy')">✍️ Copy</button>
+    </div>
+    <div id="ai-ideas" class="ai-section active">
+      <div class="ai-country-row">
+        <span style="font-size:11px;color:#888;font-weight:600;">País:</span>
+        <button class="pill" data-ai-country="sv" onclick="setAICountry('sv')" style="border-color:#C0392B;background:rgba(192,57,43,0.2);color:#C0392B;">🇸🇻 SV</button>
+        <button class="pill" data-ai-country="cr" onclick="setAICountry('cr')">🇨🇷 CR</button>
+        <button class="pill" data-ai-country="gt" onclick="setAICountry('gt')">🇬🇹 GT</button>
+        <button class="ai-btn" id="btn-gen-ideas" onclick="generateIdeas()" style="margin-left:auto;">✨ Generar 6 ideas</button>
+      </div>
+      <div id="ideas-result"><div class="empty-ai"><div style="font-size:32px;">🕷️</div><div>Presiona "Generar ideas" para inspirarte</div></div></div>
+    </div>
+    <div id="ai-copy" class="ai-section">
+      <div style="margin-bottom:10px;">
+        <label class="field-label" style="display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px;">Tipo</label>
+        <div class="pills">
+          <button class="pill" data-copy-type="post" onclick="setCopyType('post')" style="border-color:#6C63FF;background:rgba(108,99,255,0.2);color:#6C63FF;">▦ Post</button>
+          <button class="pill" data-copy-type="historia" onclick="setCopyType('historia')">◈ Historia</button>
+          <button class="pill" data-copy-type="reel" onclick="setCopyType('reel')">▶ Reel</button>
+          <button class="pill" data-copy-type="carrusel" onclick="setCopyType('carrusel')">⊞ Carrusel</button>
+        </div>
+      </div>
+      <div style="margin-bottom:9px;">
+        <label class="field-label" style="display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px;">¿De qué trata?</label>
+        <textarea class="ai-input" id="copy-topic" rows="3" placeholder="Ej: nuevo drop botas estilo Tim Burton, negras con hebillas plateadas…"></textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="field-label" style="display:block;font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px;">Tono</label>
+        <div class="pills">
+          <button class="pill" data-tone="oscuro y poético" onclick="setTone('oscuro y poético')" style="border-color:#8E44AD;background:rgba(142,68,173,0.2);color:#8E44AD;">🖤 Oscuro</button>
+          <button class="pill" data-tone="divertido y juvenil" onclick="setTone('divertido y juvenil')">😈 Divertido</button>
+          <button class="pill" data-tone="informativo" onclick="setTone('informativo')">📋 Informativo</button>
+          <button class="pill" data-tone="provocador y rebelde" onclick="setTone('provocador y rebelde')">🔥 Rebelde</button>
+        </div>
+      </div>
+      <button class="ai-btn" id="btn-gen-copy" onclick="generateCopy()">✨ Generar copy</button>
+      <div id="copy-result" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;margin-bottom:4px;">
+          <span style="font-size:10px;color:#666;font-weight:700;text-transform:uppercase;">Copy generado</span>
+          <button class="hash-copy" onclick="copyCopyResult()">📋 Copiar</button>
+        </div>
+        <div class="copy-result" id="copy-text"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot, deleteDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey:"AIzaSyD1SvABbewKD9pC6IHOxApSUUjKcrUGdwQ",
+  authDomain:"hesed-calendar.firebaseapp.com",
+  projectId:"hesed-calendar",
+  storageBucket:"hesed-calendar.firebasestorage.app",
+  messagingSenderId:"141827244322",
+  appId:"1:141827244322:web:40bfc0e661145d7448a57b"
+});
+const db=getFirestore(app);
+
+const COUNTRIES={sv:{name:"El Salvador",flag:"🇸🇻",color:"#C0392B"},cr:{name:"Costa Rica",flag:"🇨🇷",color:"#8E44AD"},gt:{name:"Guatemala",flag:"🇬🇹",color:"#D35400"}};
+const DAYS=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+const TYPES=[{id:"post",label:"Post",icon:"▦",color:"#6C63FF"},{id:"historia",label:"Historia",icon:"◈",color:"#FF6584"},{id:"reel",label:"Reel",icon:"▶",color:"#FF9F43"},{id:"carrusel",label:"Carrusel",icon:"⊞",color:"#26de81"}];
+const STATUSES=[{id:"idea",label:"Idea",color:"#aaa"},{id:"en_proceso",label:"En proceso",color:"#FF9F43"},{id:"listo",label:"Listo",color:"#26de81"},{id:"publicado",label:"Publicado",color:"#6C63FF"}];
+
+let weekOffset=0,activeCountry="sv",cards={},editingModal=null,metricsCardRef=null;
+let aiCountry="sv",copyType="post",copyTone="oscuro y poético",currentPage="calendar",adOn=false;
+let pendingPhotos=[]; // base64 strings for new photos being added
+
+function fmt(d){return d.toLocaleDateString("es-ES",{day:"numeric",month:"short"});}
+function getISOWeek(date){const d=new Date(date);d.setHours(0,0,0,0);d.setDate(d.getDate()+4-(d.getDay()||7));const y=new Date(d.getFullYear(),0,1);return Math.ceil((((d-y)/86400000)+1)/7);}
+function getWeekYear(date){const d=new Date(date);d.setDate(d.getDate()+4-(d.getDay()||7));return d.getFullYear();}
+function getWeekDates(){const now=new Date(),m=new Date(now);m.setDate(now.getDate()-((now.getDay()+6)%7)+weekOffset*7);return DAYS.map((_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});}
+function getKey(dayIdx,cId){const dates=getWeekDates(),d=dates[dayIdx],yr=getWeekYear(d),wk=getISOWeek(d);return `${cId}-${yr}w${String(wk).padStart(2,'0')}-d${dayIdx}`;}
+function getDayCards(d,c){return cards[getKey(d,c)]||[];}
+function totalByC(c){return DAYS.reduce((s,_,i)=>s+getDayCards(i,c).length,0);}
+function typeInfo(id){return TYPES.find(t=>t.id===id)||TYPES[0];}
+function statusInfo(id){return STATUSES.find(s=>s.id===id)||STATUSES[0];}
+function fmtNum(n){if(!n)return"—";if(n>=1000000)return(n/1000000).toFixed(1)+"M";if(n>=1000)return(n/1000).toFixed(1)+"K";return n;}
+function engScore(m){if(!m)return 0;return(m.likes||0)+(m.comments||0)*3+(m.shares||0)*4+(m.saves||0)*3+(m.followers||0)*5;}
+function showSync(msg,color="#26de81"){const el=document.getElementById("sync-msg");el.textContent=msg;el.style.color=color;if(msg!=="🟢 En vivo")setTimeout(()=>{el.textContent="🟢 En vivo";el.style.color="#26de81";},2500);}
+async function persistKey(key){await setDoc(doc(db,"hesed-calendar",key),{items:cards[key]||[]});showSync("✓ Guardado");}
+
+onSnapshot(collection(db,"hesed-calendar"),(snap)=>{
+  cards={};snap.forEach(d=>{cards[d.id]=d.data().items||[];});
+  render();if(currentPage==="dashboard")renderDashboard();
+  document.getElementById("loading-screen").style.display="none";
+  document.getElementById("app").style.display="block";
+  showSync("🟢 En vivo");
+});
+
+window.changeWeek=(dir)=>{weekOffset+=dir;render();if(currentPage==="dashboard")renderDashboard();};
+window.goToday=()=>{weekOffset=0;render();if(currentPage==="dashboard")renderDashboard();};
+window.setCountry=(id)=>{activeCountry=id;render();if(currentPage==="dashboard")renderDashboard();};
+window.setPage=(p)=>{
+  currentPage=p;
+  document.querySelectorAll(".page-tab").forEach((t,i)=>t.classList.toggle("active",i===(p==="calendar"?0:1)));
+  document.getElementById("calendar-page").style.display=p==="calendar"?"block":"none";
+  document.getElementById("dashboard").style.display=p==="dashboard"?"block":"none";
+  if(p==="dashboard")renderDashboard();
+};
+
+// ── PHOTOS ──
+window.handlePhotos=async(e)=>{
+  const files=Array.from(e.target.files);
+  const existing=pendingPhotos.length;
+  const canAdd=Math.min(files.length, 3-existing);
+  for(let i=0;i<canAdd;i++){
+    const base64=await fileToBase64(files[i]);
+    // Resize to keep Firebase doc small
+    const resized=await resizeImage(base64,600);
+    pendingPhotos.push(resized);
+  }
+  renderPhotoPreviews();
+  e.target.value="";
+};
+function fileToBase64(file){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(file);});}
+function resizeImage(base64,maxW){
+  return new Promise(r=>{
+    const img=new Image();
+    img.onload=()=>{
+      const ratio=Math.min(1,maxW/img.width);
+      const canvas=document.createElement("canvas");
+      canvas.width=img.width*ratio;canvas.height=img.height*ratio;
+      canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+      r(canvas.toDataURL("image/jpeg",0.75));
+    };
+    img.src=base64;
+  });
+}
+function renderPhotoPreviews(photos){
+  const arr=photos||pendingPhotos;
+  const preview=document.getElementById("photos-preview");
+  preview.innerHTML="";
+  arr.forEach((src,i)=>{
+    const wrap=document.createElement("div");wrap.className="photo-thumb";
+    wrap.innerHTML=`<img src="${src}"/><button class="photo-remove" onclick="removePhoto(${i},${photos?1:0})">✕</button>`;
+    preview.appendChild(wrap);
+  });
+  const uploadArea=document.querySelector(".photo-upload-area");
+  if(uploadArea)uploadArea.style.display=arr.length>=3?"none":"block";
+}
+window.removePhoto=(idx,fromSaved)=>{
+  if(fromSaved){
+    // remove from saved card
+    const{dayIdx,countryId,cardId}=editingModal;
+    const key=getKey(dayIdx,countryId);
+    const card=(cards[key]||[]).find(c=>c.id===cardId);
+    if(card){card.photos=(card.photos||[]).filter((_,i)=>i!==idx);renderPhotoPreviews(card.photos);}
+  } else {
+    pendingPhotos.splice(idx,1);renderPhotoPreviews();
+  }
+};
+window.updateVideoPreview=()=>{
+  const val=document.getElementById("f-video-link").value.trim();
+  const preview=document.getElementById("video-preview");
+  if(val){preview.style.display="flex";document.getElementById("video-preview-link").href=val;document.getElementById("video-preview-link").textContent=val.length>50?val.slice(0,50)+"…":val;}
+  else preview.style.display="none";
+};
+
+// ── CARD CRUD ──
+window.addCard=async(dayIdx,countryId)=>{
+  const card={id:Date.now()+Math.random(),type:"post",title:"",caption:"",hashtags:"",status:"idea",nota:"",photos:[],videoLink:"",metrics:null};
+  const key=getKey(dayIdx,countryId);
+  if(!cards[key])cards[key]=[];
+  cards[key].push(card);
+  await persistKey(key);
+  openModal(dayIdx,countryId,card.id);
+};
+window.deleteCard=async()=>{
+  const{dayIdx,countryId,cardId}=editingModal;
+  const key=getKey(dayIdx,countryId);
+  cards[key]=(cards[key]||[]).filter(c=>c.id!==cardId);
+  if(!cards[key].length){await deleteDoc(doc(db,"hesed-calendar",key));delete cards[key];}
+  else await persistKey(key);
+  closeCardModal();render();
+};
+window.saveCard=async()=>{
+  const{dayIdx,countryId,cardId}=editingModal;
+  const key=getKey(dayIdx,countryId);
+  const existingCard=(cards[key]||[]).find(c=>c.id===cardId);
+  const existingPhotos=existingCard?.photos||[];
+  const allPhotos=[...existingPhotos,...pendingPhotos].slice(0,3);
+  cards[key]=(cards[key]||[]).map(c=>c.id===cardId?{...c,
+    type:document.querySelector(".type-btn.active")?.dataset.type||c.type,
+    title:document.getElementById("f-title").value,
+    caption:document.getElementById("f-caption").value,
+    hashtags:document.getElementById("f-hashtags").value,
+    nota:document.getElementById("f-nota").value,
+    status:document.querySelector(".status-btn.active")?.dataset.status||c.status,
+    photos:allPhotos,
+    videoLink:document.getElementById("f-video-link").value.trim(),
+  }:c);
+  await persistKey(key);closeCardModal();render();
+};
+
+// ── CARD MODAL ──
+window.openModal=(dayIdx,countryId,cardId)=>{
+  const key=getKey(dayIdx,countryId);
+  const card=(cards[key]||[]).find(c=>c.id===cardId);
+  if(!card)return;
+  editingModal={dayIdx,countryId,cardId};
+  pendingPhotos=[];
+  const co=COUNTRIES[countryId];
+  document.getElementById("modal-title").textContent=`${co.flag} ${co.name} · ${DAYS[dayIdx]}`;
+  document.getElementById("f-title").value=card.title||"";
+  document.getElementById("f-caption").value=card.caption||"";
+  document.getElementById("f-hashtags").value=card.hashtags||"";
+  document.getElementById("f-nota").value=card.nota||"";
+  document.getElementById("f-video-link").value=card.videoLink||"";
+  document.getElementById("btn-save").style.background=`linear-gradient(135deg,${co.color},${co.color}cc)`;
+  // Photos
+  renderPhotoPreviews(card.photos||[]);
+  // Video preview
+  updateVideoPreview();
+  buildPills("type-row",TYPES,"type-btn",card.type,t=>t.color);
+  buildPills("status-row",STATUSES,"status-btn",card.status,s=>s.color,true);
+  updateHashMeta();
+  document.getElementById("f-hashtags").oninput=updateHashMeta;
+  document.getElementById("card-modal").classList.add("open");
+};
+
+function buildPills(cId,items,cls,activeId,colorFn,withDot=false){
+  const row=document.getElementById(cId);row.innerHTML="";
+  items.forEach(item=>{
+    const btn=document.createElement("button");
+    btn.className=`pill ${cls}`+(item.id===activeId?" active":"");
+    btn.dataset[cls.replace("-btn","")]=item.id;
+    const color=colorFn(item);
+    btn.style.cssText=`border:1px solid ${item.id===activeId?color:"rgba(255,255,255,0.1)"};background:${item.id===activeId?color+"20":"transparent"};color:${item.id===activeId?color:"#888"};`;
+    btn.innerHTML=withDot?`<div style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;margin-right:5px;"></div>${item.label}`:`${item.icon||""} ${item.label}`;
+    btn.onclick=()=>{
+      document.querySelectorAll("."+cls).forEach(b=>{b.classList.remove("active");b.style.border="1px solid rgba(255,255,255,0.1)";b.style.background="transparent";b.style.color="#888";});
+      btn.classList.add("active");btn.style.border=`1px solid ${color}`;btn.style.background=`${color}20`;btn.style.color=color;
+    };
+    row.appendChild(btn);
+  });
+}
+function updateHashMeta(){const val=document.getElementById("f-hashtags").value;const n=val.split(/\s+/).filter(h=>h.startsWith("#")).length;const meta=document.getElementById("hash-meta");if(val.trim()){meta.style.display="flex";document.getElementById("hash-count").textContent=`${n} hashtags`;}else meta.style.display="none";}
+window.copyHashtags=()=>navigator.clipboard.writeText(document.getElementById("f-hashtags").value);
+window.closeCardModal=()=>{document.getElementById("card-modal").classList.remove("open");editingModal=null;pendingPhotos=[];};
+window.overlayClick=(e,id)=>{if(e.target===document.getElementById(id))document.getElementById(id).classList.remove("open");};
+
+// ── METRICS ──
+window.openMetricsFromCard=async()=>{await saveCardSilent();const{dayIdx,countryId,cardId}=editingModal;const key=getKey(dayIdx,countryId);const card=(cards[key]||[]).find(c=>c.id===cardId);openMetricsModal(key,cardId,card);};
+async function saveCardSilent(){
+  const{dayIdx,countryId,cardId}=editingModal;const key=getKey(dayIdx,countryId);
+  const existingCard=(cards[key]||[]).find(c=>c.id===cardId);
+  const allPhotos=[...(existingCard?.photos||[]),...pendingPhotos].slice(0,3);
+  cards[key]=(cards[key]||[]).map(c=>c.id===cardId?{...c,type:document.querySelector(".type-btn.active")?.dataset.type||c.type,title:document.getElementById("f-title").value,caption:document.getElementById("f-caption").value,hashtags:document.getElementById("f-hashtags").value,nota:document.getElementById("f-nota").value,status:document.querySelector(".status-btn.active")?.dataset.status||c.status,photos:allPhotos,videoLink:document.getElementById("f-video-link").value.trim()}:c);
+  await persistKey(key);render();
+}
+function openMetricsModal(key,cardId,card){
+  metricsCardRef={key,cardId};
+  document.getElementById("metrics-post-title").textContent=card.title||"Sin título";
+  const m=card.metrics||{};
+  ["reach","likes","comments","shares","saves","views","followers"].forEach(f=>document.getElementById("m-"+f).value=m[f]||"");
+  adOn=!!(m.ad?.budget);
+  document.getElementById("ad-toggle").className="toggle"+(adOn?" on":"");
+  document.getElementById("ad-toggle-label").textContent=adOn?"Con pauta activa":"Sin pauta";
+  document.getElementById("ad-fields").style.display=adOn?"block":"none";
+  if(m.ad){document.getElementById("m-ad-budget").value=m.ad.budget||"";document.getElementById("m-ad-reach").value=m.ad.reach||"";document.getElementById("m-ad-clicks").value=m.ad.clicks||"";document.getElementById("m-ad-days").value=m.ad.days||"";document.getElementById("m-ad-objective").value=m.ad.objective||"";}
+  else["m-ad-budget","m-ad-reach","m-ad-clicks","m-ad-days"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("card-modal").classList.remove("open");
+  document.getElementById("metrics-modal").classList.add("open");
+}
+window.toggleAd=()=>{adOn=!adOn;document.getElementById("ad-toggle").className="toggle"+(adOn?" on":"");document.getElementById("ad-toggle-label").textContent=adOn?"Con pauta activa":"Sin pauta";document.getElementById("ad-fields").style.display=adOn?"block":"none";};
+window.saveMetrics=async()=>{
+  const{key,cardId}=metricsCardRef;
+  const metrics={reach:+document.getElementById("m-reach").value||0,likes:+document.getElementById("m-likes").value||0,comments:+document.getElementById("m-comments").value||0,shares:+document.getElementById("m-shares").value||0,saves:+document.getElementById("m-saves").value||0,views:+document.getElementById("m-views").value||0,followers:+document.getElementById("m-followers").value||0,ad:adOn?{budget:+document.getElementById("m-ad-budget").value||0,reach:+document.getElementById("m-ad-reach").value||0,clicks:+document.getElementById("m-ad-clicks").value||0,days:+document.getElementById("m-ad-days").value||1,objective:document.getElementById("m-ad-objective").value}:null};
+  cards[key]=(cards[key]||[]).map(c=>c.id===cardId?{...c,metrics}:c);
+  await persistKey(key);closeMetricsModal();render();if(currentPage==="dashboard")renderDashboard();
+};
+window.closeMetricsModal=()=>{document.getElementById("metrics-modal").classList.remove("open");metricsCardRef=null;};
+
+// ── DASHBOARD ──
+function getAllCards(cId){const all=[];DAYS.forEach((_,i)=>{(cards[getKey(i,cId)]||[]).forEach(c=>all.push({...c,dayIdx:i}));});return all;}
+function renderDashboard(){
+  const co=COUNTRIES[activeCountry];
+  document.getElementById("dash-country-name").textContent=`${co.flag} ${co.name}`;
+  const all=getAllCards(activeCountry),withM=all.filter(c=>c.metrics);
+  const tot={reach:0,likes:0,comments:0,shares:0,saves:0,views:0,followers:0,adBudget:0};
+  withM.forEach(c=>{const m=c.metrics;tot.reach+=m.reach||0;tot.likes+=m.likes||0;tot.comments+=m.comments||0;tot.shares+=m.shares||0;tot.saves+=m.saves||0;tot.views+=m.views||0;tot.followers+=m.followers||0;if(m.ad)tot.adBudget+=m.ad.budget||0;});
+  const er=tot.reach>0?((tot.likes+tot.comments+tot.shares+tot.saves)/tot.reach*100).toFixed(2):0;
+  const kpis=[{label:"Alcance total",value:fmtNum(tot.reach),sub:"personas",color:co.color},{label:"Likes",value:fmtNum(tot.likes),sub:"me gusta",color:"#FF6584"},{label:"Comentarios",value:fmtNum(tot.comments),sub:"",color:"#6C63FF"},{label:"Compartidos",value:fmtNum(tot.shares),sub:"",color:"#FF9F43"},{label:"Guardados",value:fmtNum(tot.saves),sub:"",color:"#26de81"},{label:"Visualizaciones",value:fmtNum(tot.views),sub:"",color:"#8E44AD"},{label:"Followers +",value:fmtNum(tot.followers),sub:"nuevos",color:"#26de81"},{label:"Engagement",value:er+"%",sub:"tasa",color:"#FF9F43"}];
+  const kg=document.getElementById("kpi-grid");kg.innerHTML="";
+  kpis.forEach(k=>{const d=document.createElement("div");d.className="kpi-card";d.style.borderColor=k.color+"30";d.innerHTML=`<div class="kpi-label">${k.label}</div><div class="kpi-value" style="color:${k.color}">${k.value||"—"}</div><div class="kpi-sub">${k.sub}</div>`;kg.appendChild(d);});
+  const sorted=[...all].sort((a,b)=>engScore(b.metrics)-engScore(a.metrics));
+  const maxS=engScore(sorted[0]?.metrics)||1;
+  const tbody=document.getElementById("posts-tbody");tbody.innerHTML="";
+  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:40px;color:#444;">No hay posts esta semana</td></tr>`;return;}
+  sorted.forEach(card=>{
+    const ti=typeInfo(card.type),m=card.metrics,s=engScore(m);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td style="max-width:150px;"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${card.title||'<span style="color:#555;font-style:italic">Sin título</span>'}</div><div style="font-size:10px;color:#666;">${DAYS[card.dayIdx]}</div></td><td><span style="color:${ti.color};font-size:11px;font-weight:700;">${ti.icon} ${ti.label}</span></td><td style="font-weight:600;">${fmtNum(m?.reach)}</td><td>${fmtNum(m?.likes)}</td><td>${fmtNum(m?.comments)}</td><td>${fmtNum(m?.shares)}</td><td>${fmtNum(m?.saves)}</td><td>${fmtNum(m?.views)}</td><td>${fmtNum(m?.followers)}</td><td>${m?.ad?`<span class="ad-badge">💰 $${m.ad.budget}</span>`:`<span style="color:#555;font-size:11px;">—</span>`}</td><td><div style="display:flex;align-items:center;gap:8px;"><div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(s/maxS*100)}%;background:${ti.color}"></div></div><span style="font-size:11px;color:#888;">${fmtNum(s)}</span></div></td>`;
+    tr.onclick=()=>{const key=Object.keys(cards).find(k=>(cards[k]||[]).some(c=>c.id===card.id));if(key)openMetricsModal(key,card.id,card);};
+    tbody.appendChild(tr);
+  });
+  const adCards=withM.filter(c=>c.metrics?.ad);
+  const adTot={budget:0,reach:0,clicks:0};
+  adCards.forEach(c=>{adTot.budget+=c.metrics.ad.budget||0;adTot.reach+=c.metrics.ad.reach||0;adTot.clicks+=c.metrics.ad.clicks||0;});
+  const cpc=adTot.clicks>0?(adTot.budget/adTot.clicks).toFixed(2):0;
+  const cpm=adTot.reach>0?((adTot.budget/adTot.reach)*1000).toFixed(2):0;
+  const adKpis=[{label:"Posts con pauta",value:adCards.length,sub:"de "+all.length+" total"},{label:"Inversión total",value:"$"+(adTot.budget.toFixed(2)||0),sub:"gastado"},{label:"Alcance pagado",value:fmtNum(adTot.reach),sub:"personas"},{label:"Clicks",value:fmtNum(adTot.clicks),sub:""},{label:"CPC",value:cpc?"$"+cpc:"—",sub:"costo por click"},{label:"CPM",value:cpm?"$"+cpm:"—",sub:"por 1K alcance"}];
+  const ag=document.getElementById("ad-kpi-grid");ag.innerHTML="";
+  adKpis.forEach(k=>{const d=document.createElement("div");d.className="kpi-card";d.style.cssText="border-color:rgba(255,159,67,0.2);background:rgba(255,159,67,0.04);";d.innerHTML=`<div class="kpi-label">${k.label}</div><div class="kpi-value" style="color:#FF9F43">${k.value||"—"}</div><div class="kpi-sub">${k.sub}</div>`;ag.appendChild(d);});
+}
+
+// ── RENDER CALENDAR ──
+function render(){
+  const dates=getWeekDates(),co=COUNTRIES[activeCountry];
+  document.getElementById("week-dates").textContent=`${fmt(dates[0])} — ${fmt(dates[6])}`;
+  document.getElementById("week-rel").textContent=weekOffset===0?"Esta semana":weekOffset>0?`+${weekOffset} sem`:`${weekOffset} sem`;
+  document.getElementById("btn-today").style.display=weekOffset===0?"none":"flex";
+  Object.keys(COUNTRIES).forEach(id=>{
+    const c=COUNTRIES[id],btn=document.querySelector(`.tab-btn[data-country="${id}"]`);
+    const n=totalByC(id);
+    document.getElementById(`count-${id}`).textContent=n;
+    document.getElementById(`ov-${id}`).textContent=n+" piezas";
+    const active=id===activeCountry;
+    btn.style.background=active?c.color:"rgba(255,255,255,0.04)";btn.style.color=active?"#fff":"#888";btn.style.borderBottom=active?`3px solid ${c.color}`:"3px solid transparent";
+    document.getElementById(`count-${id}`).style.background=active?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.08)";
+  });
+  const todayIdx=(new Date().getDay()+6)%7;
+  const grid=document.getElementById("grid");grid.innerHTML="";
+  DAYS.forEach((day,idx)=>{
+    const isToday=weekOffset===0&&idx===todayIdx;
+    const dayCards=getDayCards(idx,activeCountry);
+    const col=document.createElement("div");col.className="day-col"+(isToday?" today":"");
+    const hdr=document.createElement("div");hdr.className="day-header";
+    if(isToday)hdr.style.background=`${co.color}22`;
+    hdr.innerHTML=`<div><div class="day-name">${day}</div><div class="day-date">${fmt(dates[idx])}</div></div>${dayCards.length?`<div class="day-count">${dayCards.length}</div>`:""}`;
+    col.appendChild(hdr);
+    const area=document.createElement("div");area.className="day-cards";
+    dayCards.forEach(card=>{
+      const ti=typeInfo(card.type),si=statusInfo(card.status),m=card.metrics;
+      const div=document.createElement("div");div.className="card";
+      div.style.background=ti.color+"15";div.style.border=`1px solid ${ti.color}40`;
+      const firstPhoto=card.photos?.[0];
+      const metricsBar=m&&(m.reach||m.likes)?`<div class="card-metrics-bar"><span class="metric-chip">👁${fmtNum(m.reach)}</span><span class="metric-chip">❤️${fmtNum(m.likes)}</span><span class="metric-chip">💬${fmtNum(m.comments)}</span></div>`:"";
+      const videoIcon=card.videoLink?`<span style="font-size:9px;color:#8E44AD;margin-top:2px;display:block;">🎥 Video ref</span>`:"";
+      div.innerHTML=`<div class="card-header-row"><span class="card-type" style="color:${ti.color}">${ti.icon} ${ti.label}</span><div class="status-dot" style="background:${si.color}"></div></div><div class="card-title">${card.title||'<span style="color:#555;font-style:italic">Sin título</span>'}</div>${card.caption?`<div class="card-caption">${card.caption}</div>`:""}${firstPhoto?`<img class="card-ref-img" src="${firstPhoto}" alt="ref"/>`:""}${videoIcon}${metricsBar}${m?.ad?`<div class="has-ad-badge">💰</div>`:""}`;
+      div.addEventListener("mouseenter",()=>div.style.boxShadow=`0 4px 14px ${ti.color}30`);
+      div.addEventListener("mouseleave",()=>div.style.boxShadow="none");
+      div.onclick=()=>openModal(idx,activeCountry,card.id);
+      area.appendChild(div);
+    });
+    const addBtn=document.createElement("button");addBtn.className="add-btn";addBtn.textContent="+";
+    addBtn.onclick=()=>addCard(idx,activeCountry);
+    area.appendChild(addBtn);col.appendChild(area);grid.appendChild(col);
+  });
+}
+
+// ── AI ──
+window.openAI=()=>document.getElementById("ai-modal").classList.add("open");
+window.switchAITab=(tab)=>{document.querySelectorAll(".ai-tab").forEach((t,i)=>t.classList.toggle("active",i===(tab==="ideas"?0:1)));document.getElementById("ai-ideas").classList.toggle("active",tab==="ideas");document.getElementById("ai-copy").classList.toggle("active",tab==="copy");};
+window.setAICountry=(id)=>{aiCountry=id;document.querySelectorAll("[data-ai-country]").forEach(b=>{const c=COUNTRIES[b.dataset.aiCountry];const a=b.dataset.aiCountry===id;b.style.cssText=`padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${a?c.color:"rgba(255,255,255,0.1)"};background:${a?c.color+"20":"transparent"};color:${a?c.color:"#888"};`;});};
+window.setCopyType=(id)=>{copyType=id;document.querySelectorAll("[data-copy-type]").forEach(b=>{const t=TYPES.find(x=>x.id===b.dataset.copyType)||TYPES[0];const a=b.dataset.copyType===id;b.style.cssText=`padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${a?t.color:"rgba(255,255,255,0.1)"};background:${a?t.color+"20":"transparent"};color:${a?t.color:"#888"};`;});};
+window.setTone=(t)=>{copyTone=t;document.querySelectorAll("[data-tone]").forEach(b=>{const a=b.dataset.tone===t;b.style.cssText=`padding:6px 13px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${a?"#8E44AD":"rgba(255,255,255,0.1)"};background:${a?"rgba(142,68,173,0.2)":"transparent"};color:${a?"#8E44AD":"#888"};`;});};
+
+async function callAI(action,payload){
+  const res=await fetch("/.netlify/functions/ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,payload})});
+  const data=await res.json();
+  if(data.error)throw new Error(data.error);
+  return data.result;
+}
+window.generateIdeas=async()=>{
+  const btn=document.getElementById("btn-gen-ideas");btn.disabled=true;btn.textContent="⏳ Generando…";
+  document.getElementById("ideas-result").innerHTML=`<div class="empty-ai"><div style="font-size:28px;">🦋</div><div>Pensando ideas para Hesed…</div></div>`;
+  try{
+    const co=COUNTRIES[aiCountry];
+    const raw=await callAI("ideas",{country:co.name,count:6});
+    const ideas=JSON.parse(raw.replace(/```json|```/g,"").trim());
+    const grid=document.createElement("div");grid.className="ai-result-grid";
+    ideas.forEach(idea=>{
+      const ti=TYPES.find(t=>t.id===idea.type)||TYPES[0];
+      const div=document.createElement("div");div.className="idea-card";div.style.border=`1px solid ${ti.color}30`;
+      div.innerHTML=`<div class="idea-card-type" style="color:${ti.color}">${ti.icon} ${ti.label}</div><div class="idea-card-title">${idea.title}</div><div class="idea-card-caption">${idea.caption}</div>${idea.angle?`<div class="idea-card-angle">💡 ${idea.angle}</div>`:""}<button class="idea-use-btn" style="background:${ti.color}20;color:${ti.color};border:1px solid ${ti.color}40;" onclick="useIdea(${JSON.stringify(JSON.stringify(idea))})">+ Usar esta semana</button>`;
+      grid.appendChild(div);
+    });
+    document.getElementById("ideas-result").innerHTML="";document.getElementById("ideas-result").appendChild(grid);
+  }catch(e){document.getElementById("ideas-result").innerHTML=`<div class="empty-ai"><div style="font-size:28px;">😕</div><div>Error. Intenta de nuevo.</div></div>`;}
+  btn.disabled=false;btn.textContent="✨ Generar 6 ideas";
+};
+window.useIdea=(jsonStr)=>{
+  const idea=JSON.parse(jsonStr);
+  for(let i=0;i<7;i++){const key=getKey(i,aiCountry);if((cards[key]||[]).length<5){const card={id:Date.now()+Math.random(),type:idea.type||"post",title:idea.title||"",caption:idea.caption||"",hashtags:"",status:"idea",nota:"",photos:[],videoLink:"",metrics:null};if(!cards[key])cards[key]=[];cards[key].push(card);persistKey(key);render();document.getElementById("ai-modal").classList.remove("open");return;}}
+  alert("Todos los días están llenos.");
+};
+window.generateCopy=async()=>{
+  const topic=document.getElementById("copy-topic").value.trim();
+  if(!topic){document.getElementById("copy-topic").focus();return;}
+  const btn=document.getElementById("btn-gen-copy");btn.disabled=true;btn.textContent="⏳ Generando…";
+  document.getElementById("copy-result").style.display="none";
+  try{
+    const ti=TYPES.find(t=>t.id===copyType)||TYPES[0];
+    const raw=await callAI("copy",{type:ti.label,topic,tone:copyTone});
+    document.getElementById("copy-text").textContent=raw.trim();document.getElementById("copy-result").style.display="block";
+  }catch(e){document.getElementById("copy-text").textContent="Error. Intenta de nuevo.";document.getElementById("copy-result").style.display="block";}
+  btn.disabled=false;btn.textContent="✨ Generar copy";
+};
+window.copyCopyResult=()=>navigator.clipboard.writeText(document.getElementById("copy-text").textContent);
+
+window.exportPNG=()=>{
+  const dates=getWeekDates(),co=COUNTRIES[activeCountry];
+  const canvas=document.createElement("canvas");canvas.width=1400;canvas.height=720;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="#0D0F1A";ctx.fillRect(0,0,1400,720);ctx.fillStyle="#1A0A0A";ctx.fillRect(0,0,1400,68);
+  ctx.fillStyle="#E8EAFF";ctx.font="bold 22px sans-serif";ctx.fillText(`HESED · ${co.name} ${co.flag}`,24,30);
+  ctx.fillStyle="#888";ctx.font="13px sans-serif";ctx.fillText(`Semana ${fmt(dates[0])} – ${fmt(dates[6])}`,24,52);
+  const colW=1352/7,sx=24,sy=86,ch=618;
+  const TC={post:"#6C63FF",historia:"#FF6584",reel:"#FF9F43",carrusel:"#26de81"};
+  DAYS.forEach((day,idx)=>{
+    const x=sx+idx*colW;
+    ctx.fillStyle="rgba(255,255,255,0.03)";ctx.beginPath();ctx.roundRect(x,sy,colW-8,ch,10);ctx.fill();
+    ctx.fillStyle=co.color+"33";ctx.beginPath();ctx.roundRect(x,sy,colW-8,36,[10,10,0,0]);ctx.fill();
+    ctx.fillStyle="#ccc";ctx.font="bold 10px sans-serif";ctx.fillText(day.toUpperCase(),x+10,sy+14);
+    ctx.fillStyle="#666";ctx.font="10px sans-serif";ctx.fillText(fmt(dates[idx]),x+10,sy+28);
+    let cy=sy+44;
+    (cards[getKey(idx,activeCountry)]||[]).forEach(card=>{
+      const tc=TC[card.type]||"#6C63FF";
+      ctx.fillStyle=tc+"22";ctx.beginPath();ctx.roundRect(x+4,cy,colW-16,50,8);ctx.fill();
+      ctx.strokeStyle=tc+"55";ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(x+4,cy,colW-16,50,8);ctx.stroke();
+      ctx.fillStyle=tc;ctx.font="bold 8px sans-serif";ctx.fillText(card.type.toUpperCase(),x+10,cy+12);
+      ctx.fillStyle="#E8EAFF";ctx.font="bold 10px sans-serif";ctx.fillText((card.title||"Sin título").slice(0,26),x+10,cy+27);
+      if(card.metrics?.reach){ctx.fillStyle="#666";ctx.font="9px sans-serif";ctx.fillText(`👁${fmtNum(card.metrics.reach)} ❤️${fmtNum(card.metrics.likes)}`,x+10,cy+40);}
+      cy+=58;
+    });
+  });
+  ctx.fillStyle="#2a2a2a";ctx.font="10px sans-serif";ctx.fillText("hesed · content calendar",1230,714);
+  const a=document.createElement("a");a.download=`hesed-${activeCountry}-semana${weekOffset}.png`;a.href=canvas.toDataURL("image/png");a.click();
+};
+</script>
+</body>
+</html>
