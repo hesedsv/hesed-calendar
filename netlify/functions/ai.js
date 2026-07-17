@@ -16,7 +16,7 @@ exports.handler = async (event) => {
     if (action === "ideas") {
       const prompt = `${BRAND} ${TONO}
 
-Genera 4 ideas de contenido para Instagram de Hesed ${payload.country}. 
+Genera 3 ideas de contenido para Instagram de Hesed ${payload.country}. 
 
 IMPORTANTE: Cada idea es un BRIEF creativo, no copy. Describe QUÉ hacer, no el texto del post.
 
@@ -26,7 +26,7 @@ JSON sin backticks:
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {"Content-Type":"application/json","x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
-        body: JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:400,messages:[{role:"user",content:prompt}]}),
+        body: JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:500,messages:[{role:"user",content:prompt}]}),
       });
       const data = await response.json();
       const result = data.content?.map(b=>b.text||"").join("")||"";
@@ -42,7 +42,7 @@ Escríbelo como lo haría una chica cool de 25 años que ama la moda alternativa
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {"Content-Type":"application/json","x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01"},
-        body: JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:400,messages:[{role:"user",content:prompt}]}),
+        body: JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:300,messages:[{role:"user",content:prompt}]}),
       });
       const data = await response.json();
       const result = data.content?.map(b=>b.text||"").join("")||"";
